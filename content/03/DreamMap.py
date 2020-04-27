@@ -21,15 +21,12 @@ def kspace_to_image(sig, dim=None):
     """
     if dim is None:
         dim = range(sig.ndim)
-    elif not isinstance(dim, collections.Iterable):
+    elif not isinstance(dim, collections.abc.Iterable):
         dim = [dim]
 
     sig = ifftshift(sig, axes=dim)
     sig = ifftn(sig, axes=dim)
     sig = ifftshift(sig, axes=dim)
-
-    # sig = fftshift(fftn(fftshift(sig, axes=dim), axes=dim), axes=dim)
-    # sig = ifftshift(ifftn(ifftshift(sig, axes=dim), axes=dim), axes=dim)
 
     return sig
 
@@ -44,24 +41,22 @@ def image_to_kspace(sig, dim=None):
     """
     if dim is None:
         dim = range(sig.ndim)
-    elif not isinstance(dim, collections.Iterable):
+    elif not isinstance(dim, collections.abc.Iterable):
         dim = [dim]
 
     sig = fftshift(sig, axes=dim)
     sig = fftn(sig, axes=dim)
     sig = fftshift(sig, axes=dim)
 
-    # sig = ifftshift(ifftn(ifftshift(sig, axes=dim), axes=dim), axes=dim)
-    # sig = fftshift(fftn(fftshift(sig, axes=dim), axes=dim), axes=dim)
-
     return sig
 
 
 def calc_fa(ste, fid):
+    ste, fid = abs(ste), abs(fid)
     if np.issubdtype(fid.dtype, np.integer):
-        ratio = abs(ste) / np.maximum(abs(fid), 1)
+        ratio = ste / np.maximum(fid, 1)
     else:  # floating point
-        ratio = abs(ste) / np.maximum(abs(fid), np.finfo(fid.dtype).resolution)
+        ratio = ste / np.maximum(fid, np.finfo(fid.dtype).resolution)
     famap = np.rad2deg(np.arctan(np.sqrt(2. * ratio)))
     try:
         famap[famap < 0] = 0.
@@ -140,7 +135,7 @@ def applyFilter(sig, filt, axes=[0, 1], back_transform=True):
     return sig
 
 
-def local_filter(ste, fid, ti, alpha=60, beta=6, tr=3e-3, t1=2., blur_read=False, fmap=None, nbins=40, niter=2, store_iter = False):
+def local_filter(ste, fid, ti, alpha=60, beta=6, tr=3e-3, t1=2., blur_read=True, fmap=None, nbins=40, niter=4, store_iter = False):
 
     def iteration(fmap, fid):
 
@@ -193,13 +188,15 @@ def local_filter(ste, fid, ti, alpha=60, beta=6, tr=3e-3, t1=2., blur_read=False
         if store_iter:
             fmap_iter[..., i+1] = fmap
 
+    ste, fidnew = abs(ste), abs(fidnew)
+
     if store_iter:
-        fmap = fmap_iter
+        return ste, fidnew, fmap_iter
+    else:
+        return ste, fidnew
 
-    return fmap, fidnew
 
-
-def global_filter(ste, fid, ti, alpha=60, beta=6, tr=3e-3, t1=2., blur_read=False):
+def global_filter(ste, fid, ti, alpha=60, beta=6, tr=3e-3, t1=2., blur_read=True):
     nz, ny = ste.shape[:2]
     mean_alpha = calc_fa(ste.mean(), fid.mean())
     mean_beta = mean_alpha / alpha * beta
@@ -213,14 +210,13 @@ def global_filter(ste, fid, ti, alpha=60, beta=6, tr=3e-3, t1=2., blur_read=Fals
         fid = applyFilter(fid, filt_ro, axes=[2])
         ste = applyFilter(ste, filt_ro, axes=[2])
 
-    # filter fid in k-space
-    return calc_fa(abs(ste), abs(fid))
+    return abs(ste), abs(fid)
 
 
-def genFieldmaps(fname, meta, fmap_out=None, fcorr_out=None, flocal_out=None, dummies=1, blur_read=False, nbins=40, niter=2, read_dim=2):
+def genFieldmaps(fname, meta, fmap_out=None, fcorr_out=None, flocal_out=None, dummies=1, blur_read=True, nbins=40, niter=2, read_dim=2):
 
     nii = nib.load(fname)
-    data = nii.get_data()
+    data = nii.get_fdata()
     
     if np.ndim(data) != 4:
         print('warning: expected 4D nifti file, found %d dims instead' % np.ndim(data))
@@ -253,8 +249,9 @@ def genFieldmaps(fname, meta, fmap_out=None, fcorr_out=None, flocal_out=None, du
     fid = data[..., 1]
 
     ti = approx_sampling(fid.shape[:2], meta['etl'], meta['tr'], dummies=dummies)
-    fmap = global_filter(ste, fid, ti, alpha=meta['alpha'], beta=meta['beta'],
+    ste_glob, fid_glob = global_filter(ste, fid, ti, alpha=meta['alpha'], beta=meta['beta'],
                          tr=meta['tr'], t1=meta['t1'], blur_read=blur_read)
+    fmap = calc_fa(ste_glob, fid_glob)
 
     if fcorr_out is not None:
         nii_out = nib.Nifti1Image(np.moveaxis(fmap, 2, read_dim), nii.affine, nii.header)
@@ -263,9 +260,10 @@ def genFieldmaps(fname, meta, fmap_out=None, fcorr_out=None, flocal_out=None, du
 
     if flocal_out is not None:
         # use fmap from fcorr as initial guess
-        fmap, _ = local_filter(ste, fid, ti, alpha=meta['alpha'], beta=meta['beta'],
+        ste, fid = local_filter(ste, fid, ti, alpha=meta['alpha'], beta=meta['beta'],
                                tr=meta['tr'], t1=meta['t1'], blur_read=blur_read,
                                fmap=fmap, nbins=nbins, niter=niter)
+        fmap = calc_fa(ste, fid)
         nii_out = nib.Nifti1Image(np.moveaxis(fmap, 2, read_dim), nii.affine, nii.header)
         nii_out.set_data_dtype(np.float32)
         nii_out.to_filename(flocal_out)
@@ -313,7 +311,7 @@ class NiftiFile(argparse.FileType):
 
 
 if __name__ == "__main__":
-    
+
     parser = argparse.ArgumentParser()
     # First, a parser object must be created:
     parser = argparse.ArgumentParser(description='Calculates B1 map from DREAM data\n')

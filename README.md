@@ -8,7 +8,7 @@ Paper: https://onlinelibrary.wiley.com/doi/abs/10.1002/mrm.27773
 Code: https://gitlab.com/pehses/3dream-example
 
 ### Whole-brain B<sub>1</sub>-mapping using three-dimensional DREAM
-*Philip Ehses* | *Daniel Brenner* | *Rudiger Strinberg* | *Eberhard D.Pracht* |*Tony Stocker*
+*Philipp Ehses* | *Daniel Brenner* | *Ruediger Stirnberg* | *Eberhard D. Pracht* |*Tony Stoecker*
 
 **Purpose**: Demonstration of a 3D version of the DREAM sequence (3DREAM) for rapid 3D flip angle and B<sub>1</sub>+ mapping of the human brain. 
 

@@ -1,5 +1,5 @@
 ***
-*Philip Ehses* <sup>1</sup>| *Daniel Brenner* <sup>1</sup>| *Rudiger Strinberg* <sup>1</sup>| *Eberhard D.Pracht* <sup>1</sup>|*Tony Stocker* <sup>1,2</sup>
+*Philipp Ehses* <sup>1</sup>| *Daniel Brenner* <sup>1</sup>| *Ruediger Stirnberg* <sup>1</sup>| *Eberhard D. Pracht* <sup>1</sup>|*Tony Stoecker* <sup>1,2</sup>
 
 <sup>1</sup> German Center for Neurodegenerative Diseases (DZNE), Bonn, Germany
 <br>
@@ -19,4 +19,4 @@ Remaining blurring can be controlled by adjusting the echo train length and read
 *B<sub>1</sub><sup>+</sup> mapping, flip angle, high-field MRI, parallel transmission*
 
 
-**Corespondence**: Philip Ehses, German Center for Neurodegenerative Diseases (DZNE), Sigmund-Freud-Straße 27, 53127 Bonn, Germany 
+**Corespondence**: Philipp Ehses, German Center for Neurodegenerative Diseases (DZNE), Venusberg-Campus 1, Gebäude 99, 53127 Bonn, Germany 
